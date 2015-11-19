@@ -1,0 +1,18 @@
+{
+  "name": "vdom-todo",
+  "version": "0.0.1",
+  "description": "Implementing virtual-dom isomorphic-always todo list",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.13.3",
+    "rethinkdb": "^2.2.0",
+    "vdom-as-json": "^1.0.8",
+    "virtual-dom": "^2.1.1",
+    "ws": "^0.8.0"
+  }
+}
