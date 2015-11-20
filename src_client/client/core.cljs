@@ -66,3 +66,10 @@
       (patch-element msg-data))))
 
 (defonce set-handler (obj/set ws "onmessage" handle-message))
+
+(defn reset-dom []
+  (-> (dom/getElement "app")
+      dom/removeChildren)
+  true)
+
+#_ (reset-dom)

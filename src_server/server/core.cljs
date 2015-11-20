@@ -126,6 +126,7 @@
 (defonce create-element (nodejs/require "virtual-dom/create-element"))
 (defonce to-json (nodejs/require "vdom-as-json/toJson"))
 (defonce from-json (nodejs/require "vdom-as-json/fromJson"))
+(defonce send-dom? (atom true))
 
 ;;; Client functions
 
@@ -140,6 +141,9 @@
 (defn client-el-value [id]
   (str "client.core.get_el_value('" id "')"))
 
+(defn client-eval [f]
+  (str "(" (.toString f) ")();"))
+
 ;;; Vdom Elements
 
 (defn render-input [id s]
@@ -153,17 +157,14 @@
   (vnode.
     "button" #js {:attributes
                   #js {:style "font-weight:bold;"
-                       ;; :ev-click #(js/alert "yo delegator")
-                       ;; :onmouseenter "client.core.send_message('just got hovered, dude');"
-                       ;; :onclick "client.core.send_message('hi there dude');"
                        :onclick s
                        :key (str (gensym))
-
-                       ;; :onclick (str "(" (.toString alert) ")();" )
                        }} #js [(vtext. label)]))
 
 (def b1 (render-click "action" (client-echo {:action :button.click :data {}})))
-(def b2 (render-click "action + data" (client-el-value "my-input")))
+(def b2 (render-click "data" (client-el-value "my-input")))
+(def b3 (render-click "alert" (client-eval #(js/alert "yo, eval me"))))
+
 (def i1 (render-input "send-on-keypress" (client-value)))
 (def i2 (render-input "my-input" ""))
 
@@ -172,21 +173,34 @@
     (vnode. "div" #js {} children)))
 
 (def tree1 (render b1))
-(def tree2 (render i1))
-(def tree3 (render i2 b2))
+(def tree2 (render b3))
+(def tree3 (render i1))
+(def tree4 (render i2 b2))
 
-(def diff-tree-1-2 (diff tree1 tree2))
+(defn patch-tree [a b]
+  (diff a b))
 
-(go-loop [conn (<! conn-ch)]
-         (.send conn (.stringify js/JSON #js {:type "node" :data (to-json tree1)}))
-         (.send conn (.stringify js/JSON #js {:type "node" :data (to-json tree2)}))
-         (.send conn (.stringify js/JSON #js {:type "node" :data (to-json tree3)}))
-         (recur (<! conn-ch)))
+(comment
 
-    ;;; Patch
-#_ (.send @my-conn (.stringify js/JSON #js {:type "patch"
-                                            :data (to-json diff-tree-1-2)}))
+  ;;; Initialize DOM
+  (.send @my-conn (.stringify js/JSON #js {:type "node" :data (to-json tree1)}))
 
+  ;;; Send Patches to DOM
+  (.send @my-conn (.stringify js/JSON #js {:type "patch" :data (to-json (diff tree1 tree2))}))
+  (.send @my-conn (.stringify js/JSON #js {:type "patch" :data (to-json (diff tree2 tree3))}))
+  (.send @my-conn (.stringify js/JSON #js {:type "patch" :data (to-json (diff tree3 tree4))}))
+  (.send @my-conn (.stringify js/JSON #js {:type "patch" :data (to-json (diff tree4 tree1))})))
+
+(comment
+  (go-loop
+    [conn (<! conn-ch)]
+    ;;; On connection, load all elements
+    (when @send-dom?
+      (.send conn (.stringify js/JSON #js {:type "node" :data (to-json tree1)}))
+      (.send conn (.stringify js/JSON #js {:type "node" :data (to-json tree2)}))
+      (.send conn (.stringify js/JSON #js {:type "node" :data (to-json tree3)}))
+      (.send conn (.stringify js/JSON #js {:type "node" :data (to-json tree4)})))
+    (recur (<! conn-ch))))
 
 
 
