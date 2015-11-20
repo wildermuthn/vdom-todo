@@ -2,7 +2,8 @@
   (:require [goog.object :as obj]
             [goog.dom :as dom]
             [cognitect.transit :as t]
-            [clojure.string]))
+            [clojure.string]
+            [cljs.core.async :as ca]))
 
 ;;; Init
 
