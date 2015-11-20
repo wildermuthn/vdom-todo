@@ -98,6 +98,7 @@
 ;;; Message Handlers
 
 (defonce message-ch (chan 100))
+(defonce conn-ch (chan))
 
 (defn handle-message [conn msg]
   (let [data (t/read reader msg)]
@@ -107,6 +108,7 @@
 (defn handle-ws-conn [conn]
   (println "Websocket connected")
   (reset! my-conn conn)
+  (put! conn-ch conn)
   (.on conn "message" (partial handle-message conn)))
 
 (defonce on-conn (.on conn "connection" #(handle-ws-conn %)))
@@ -140,10 +142,10 @@
 
 ;;; Vdom Elements
 
-(defn render-input [s]
+(defn render-input [id s]
   (vnode. "input" #js {:attributes
                        #js {:type "text"
-                            :id "my-input"
+                            :id id
                             :key (str (gensym))
                             :oninput s}}))
 
@@ -162,32 +164,28 @@
 
 (def b1 (render-click "action" (client-echo {:action :button.click :data {}})))
 (def b2 (render-click "action + data" (client-el-value "my-input")))
-(def i1 (render-input (client-value)))
-(def i2 (render-input ""))
+(def i1 (render-input "send-on-keypress" (client-value)))
+(def i2 (render-input "my-input" ""))
 
 (defn render [input & [button]]
   (let [children (clj->js (filter some? [input button]))]
     (vnode. "div" #js {} children)))
 
-(def b1-tree (render b1))
-(def b2-tree (render i2 b2))
+(def tree1 (render b1))
+(def tree2 (render i1))
+(def tree3 (render i2 b2))
 
-(def diff-b2 (diff b1-tree b2-tree))
+(def diff-tree-1-2 (diff tree1 tree2))
 
-(comment
+(go-loop [conn (<! conn-ch)]
+         (.send conn (.stringify js/JSON #js {:type "node" :data (to-json tree1)}))
+         (.send conn (.stringify js/JSON #js {:type "node" :data (to-json tree2)}))
+         (.send conn (.stringify js/JSON #js {:type "node" :data (to-json tree3)}))
+         (recur (<! conn-ch)))
 
-  ;;; Just a button
-  (.send @my-conn (.stringify js/JSON #js {:type "node"
-                                           :data (to-json b1-tree)}))
-
-  ;;; Input and button
-  (.send @my-conn (.stringify js/JSON #js {:type "node"
-                                           :data (to-json b2-tree)}))
-
-  ;;; Patch
-  (.send @my-conn (.stringify js/JSON #js {:type "patch"
-                                           :data (to-json diff-b2)}))
-  )
+    ;;; Patch
+#_ (.send @my-conn (.stringify js/JSON #js {:type "patch"
+                                            :data (to-json diff-tree-1-2)}))
 
 
 
