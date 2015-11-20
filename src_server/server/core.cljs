@@ -18,6 +18,14 @@
 (def -main (fn [] nil))
 (set! *main-cli-fn* -main)
 
+;;; Transit
+
+(def reader (t/reader :json))
+(def writer (t/writer :json))
+
+(t/write writer :foo)
+(t/read reader (t/write writer :foo))
+
 ;;; DB
 
 (defonce r (nodejs/require "rethinkdb"))
@@ -87,8 +95,14 @@
 (defonce my-conn (atom {}))
 (defonce result (atom {}))
 
+;;; Message Handlers
+
+(defonce message-ch (chan 100))
+
 (defn handle-message [conn msg]
-  (println "Websocket message: " msg))
+  (let [data (t/read reader msg)]
+    (put! message-ch data)
+    (println "Websocket message: " data)))
 
 (defn handle-ws-conn [conn]
   (println "Websocket connected")
@@ -96,6 +110,11 @@
   (.on conn "message" (partial handle-message conn)))
 
 (defonce on-conn (.on conn "connection" #(handle-ws-conn %)))
+
+(defn message-fn [f]
+  (take! message-ch f))
+
+(def print-message (partial message-fn println))
 
 ;;; VDOM
 
@@ -106,21 +125,69 @@
 (defonce to-json (nodejs/require "vdom-as-json/toJson"))
 (defonce from-json (nodejs/require "vdom-as-json/fromJson"))
 
-(defn render [data]
-  (vnode. "div" #js {:className "greeting"} (make-array (vtext. (str "hello " data)))))
+;;; Client functions
 
-(def vtree (render "nate"))
-(def vtree2 (render "john paul"))
+(defn client-echo [data]
+  (let [json-data (t/write writer data)
+        extra-quotes (.stringify js/JSON json-data)]
+    (str "client.core.send_message(" extra-quotes ")")))
 
-(def el (create-element vtree))
-(def diff-vtree (diff vtree vtree2))
+(defn client-value []
+  (str "client.core.get_value(this)"))
+
+(defn client-el-value [id]
+  (str "client.core.get_el_value('" id "')"))
+
+;;; Vdom Elements
+
+(defn render-input [s]
+  (vnode. "input" #js {:attributes
+                       #js {:type "text"
+                            :id "my-input"
+                            :key (str (gensym))
+                            :oninput s}}))
+
+(defn render-click [label s]
+  (vnode.
+    "button" #js {:attributes
+                  #js {:style "font-weight:bold;"
+                       ;; :ev-click #(js/alert "yo delegator")
+                       ;; :onmouseenter "client.core.send_message('just got hovered, dude');"
+                       ;; :onclick "client.core.send_message('hi there dude');"
+                       :onclick s
+                       :key (str (gensym))
+
+                       ;; :onclick (str "(" (.toString alert) ")();" )
+                       }} #js [(vtext. label)]))
+
+(def b1 (render-click "action" (client-echo {:action :button.click :data {}})))
+(def b2 (render-click "action + data" (client-el-value "my-input")))
+(def i1 (render-input (client-value)))
+(def i2 (render-input ""))
+
+(defn render [input & [button]]
+  (let [children (clj->js (filter some? [input button]))]
+    (vnode. "div" #js {} children)))
+
+(def b1-tree (render b1))
+(def b2-tree (render i2 b2))
+
+(def diff-b2 (diff b1-tree b2-tree))
 
 (comment
+
+  ;;; Just a button
   (.send @my-conn (.stringify js/JSON #js {:type "node"
-                                           :data (to-json vtree)}))
+                                           :data (to-json b1-tree)}))
+
+  ;;; Input and button
+  (.send @my-conn (.stringify js/JSON #js {:type "node"
+                                           :data (to-json b2-tree)}))
+
+  ;;; Patch
   (.send @my-conn (.stringify js/JSON #js {:type "patch"
-                                           :data (to-json diff-vtree)}))
-  (send-msg (to-json diff-vtree)))
+                                           :data (to-json diff-b2)}))
+  )
 
 
 

@@ -1,18 +1,54 @@
 (ns client.core
   (:require [goog.object :as obj]
+            [goog.dom :as dom]
             [cognitect.transit :as t]
             [clojure.string]))
 
-(def host (clojure.string/replace (.. js/window -document -location -host)
+;;; Init
+
+(defonce host (clojure.string/replace (.. js/window -document -location -host)
                                       (js/RegExp. ":.*")
                                       ""))
-
 (defonce ws (js/WebSocket. (str "ws://" host ":8070")))
 (defonce root-node (atom nil))
+
+;;; Transit
+
+(def reader (t/reader :json))
+(def writer (t/writer :json))
+
+(t/write writer :foo)
+(t/read reader (t/write writer :foo))
+
+;;; Utils
+
+(defonce d (atom {}))
+
+(defn send-message [msg]
+  (let [data (t/read reader msg)]
+    (reset! d data)
+    (.send ws msg)))
+
+(defn get-value [e]
+  (let [text (.-value e)
+        msg (t/write writer text)]
+    (reset! d text)
+    (.send ws msg)))
+
+(defn get-el-value [id]
+  (let [el (dom/getElement id)
+            text (.-value el)
+            msg (t/write writer text)]
+        (.send ws msg)))
+
+
+#_ (send-message (str (rand-int 10000)))
 
 (defn update-element [msg-data]
   (let [data (.fromJson js/vdomAsJson msg-data)
         node (.. js/virtualDom (create data))]
+    (.. js/console (log data))
+    (.. js/console (log node))
     (.. js/document -body (appendChild node))
     (reset! root-node node)))
 
