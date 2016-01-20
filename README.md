@@ -15,11 +15,15 @@ Install Node 4.2.2
 ## Install
 
 `npm install`
+
 `lein deps`
+
 
 ## Run
 
-Use tmux or two tabs. Wait for first command to finish.
+Use tmux or tabs. Wait for each command to finish.
+
+`rethinkdb`
 
 `rlwrap lein figwheel dev-server dev-client`
 
