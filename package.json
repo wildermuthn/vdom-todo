@@ -10,7 +10,10 @@
   "license": "ISC",
   "dependencies": {
     "express": "^4.13.3",
+    "html2hscript": "^1.2.1",
     "rethinkdb": "^2.2.0",
+    "todomvc-app-css": "^2.0.3",
+    "todomvc-common": "^1.0.2",
     "vdom-as-json": "^1.0.8",
     "virtual-dom": "^2.1.1",
     "ws": "^0.8.0"

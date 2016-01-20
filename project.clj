@@ -29,4 +29,4 @@
                                    :target :nodejs
                                    :optimizations :none
                                    :source-map true }}]}
-  :figwheel {:server-port 3450})
+  :figwheel {:server-port 3451})

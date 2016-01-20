@@ -30,6 +30,15 @@
     (reset! d data)
     (.send ws msg)))
 
+(defn action-value [msg e]
+  (let [data (t/read reader msg)
+        [action data] (if (and (map? data) (:action data))
+                        [(:action data) (dissoc data :action)]
+                        [data {}])
+        value {:value (.-value e)}
+        msg (t/write writer [action (merge data value)])]
+    (.send ws msg)))
+
 (defn get-value [e]
   (let [text (.-value e)
         msg (t/write writer text)]
@@ -48,9 +57,10 @@
 (defn update-element [msg-data]
   (let [data (.fromJson js/vdomAsJson msg-data)
         node (.. js/virtualDom (create data))]
-    (.. js/console (log data))
-    (.. js/console (log node))
-    (.. js/document -body (appendChild node))
+    ;; (.. js/console (log data))
+    ;; (.. js/console (log node))
+    (-> (dom/getElement "app")
+        (dom/appendChild node))
     (reset! root-node node)))
 
 (defn patch-element [msg-data]
