@@ -12,11 +12,18 @@ Install RethinkDB
 Install Figwheel
 Install Node 4.2.2
 
-Open in two windows/tmux-panes:
+## Install
+
+`npm install`
+`lein deps`
+
+## Run
+
+Use tmux or two tabs. Wait for first command to finish.
 
 `rlwrap lein figwheel dev-server dev-client`
 
 `node target/server_out/server.js`
-
+ 
 Open your browser to `localhost:3451`
 
