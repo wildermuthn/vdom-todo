@@ -20,5 +20,3 @@ Open in two windows/tmux-panes:
 
 Open your browser to `localhost:3451`
 
-Open src_server/server/core.cljs and send a message via websocket, to first create a node, and then patch a node.
-
