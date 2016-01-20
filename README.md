@@ -16,7 +16,7 @@ Open in two windows/tmux-panes:
 `rlwrap lein figwheel dev-server dev-client`
 `node target/server_out/server.js`
 
-Open your browser to `localhost:3450`
+Open your browser to `localhost:3451`
 
 Open src_server/server/core.cljs and send a message via websocket, to first create a node, and then patch a node.
 
